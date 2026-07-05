@@ -1,54 +1,83 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { CreateNoteDto, Note, UpdateNoteDto } from './note.dto';
+import { desc, eq } from 'drizzle-orm';
+import { uuidv7 } from 'uuidv7';
+import type { CreateNoteDto, UpdateNoteDto } from './note.dto';
+import { DatabaseService } from '../database/database.service';
+import { notesTable, type NewNoteRecord, type NoteRecord } from '../database/schema';
 
 @Injectable()
 export class NotesService {
-  private readonly notes: Note[] = [];
-  private idCounter = 1;
+  constructor(private readonly databaseService: DatabaseService) {}
 
-  findAll(): Note[] {
-    return this.notes;
+  async findAll(): Promise<NoteRecord[]> {
+    return this.databaseService.db.select().from(notesTable).orderBy(desc(notesTable.createdAt));
   }
 
-  findById(id: number): Note {
-    const note = this.notes.find((note) => note.id === id);
+  async findById(id: string): Promise<NoteRecord> {
+    const [note] = await this.databaseService.db
+      .select()
+      .from(notesTable)
+      .where(eq(notesTable.id, id))
+      .limit(1);
+
     if (!note) {
       throw new NotFoundException(`Note with id ${id} not found`);
     }
+
     return note;
   }
 
-  create(dto: CreateNoteDto): Note {
-    const newNote: Note = {
-      id: this.idCounter++,
-      title: dto.title,
-      content: dto.content,
-      createdAt: new Date(),
+  async create(dto: CreateNoteDto): Promise<NoteRecord> {
+    const [note] = await this.databaseService.db
+      .insert(notesTable)
+      .values({
+        id: uuidv7(),
+        title: dto.title,
+        content: dto.content,
+      })
+      .returning();
+
+    if (!note) {
+      throw new Error('Failed to create note');
+    }
+
+    return note;
+  }
+
+  async update(id: string, dto: UpdateNoteDto): Promise<NoteRecord> {
+    const changes: Partial<NewNoteRecord> = {
+      updatedAt: new Date(),
     };
 
-    this.notes.push(newNote);
-    return newNote;
-  }
+    if (dto.title !== undefined) {
+      changes.title = dto.title;
+    }
 
-  update(id: number, dto: UpdateNoteDto): Note {
-    const note = this.notes.find((n) => n.id === id);
+    if (dto.content !== undefined) {
+      changes.content = dto.content;
+    }
+
+    const [note] = await this.databaseService.db
+      .update(notesTable)
+      .set(changes)
+      .where(eq(notesTable.id, id))
+      .returning();
+
     if (!note) {
       throw new NotFoundException(`Note with id ${id} not found`);
     }
-    if (dto.title !== undefined) {
-      note.title = dto.title;
-    }
-    if (dto.content !== undefined) {
-      note.content = dto.content;
-    }
+
     return note;
   }
 
-  delete(id: number): void {
-    const index = this.notes.findIndex((n) => n.id === id);
-    if (index === -1) {
+  async delete(id: string): Promise<void> {
+    const deleted = await this.databaseService.db
+      .delete(notesTable)
+      .where(eq(notesTable.id, id))
+      .returning({ id: notesTable.id });
+
+    if (deleted.length === 0) {
       throw new NotFoundException(`Note with id ${id} not found`);
     }
-    this.notes.splice(index, 1);
   }
 }

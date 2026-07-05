@@ -11,9 +11,8 @@ RUN yarn install --immutable
 
 COPY . .
 
-# 왜 백엔드에선 환경변수를 설정하지 않을까?
-# Node에서는 .env, .env.develop 아니면 환경변수를 기본적으로 읽을 수 있다.
-# NestJS > NodeJs에서 돌아감 > 반드시 환경변수가 필요 없다.
+# 이 앱은 PostgreSQL에 연결해야 하므로 DATABASE_URL 같은 런타임 환경변수가 필요하다.
+# NestJS는 Node 위에서 동작하지만, DB 연결 정보는 별도로 주입해야 한다.
 
 
 RUN yarn build

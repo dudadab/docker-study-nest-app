@@ -8,6 +8,7 @@
 - **Language**: TypeScript
 - **Package Manager**: Yarn (Berry)
 - **Containerization**: Docker
+- **Persistence**: PostgreSQL + Drizzle ORM
 
 ## 🐳 Docker로 컨테이너 실행하기 (과제)
 
@@ -17,6 +18,8 @@
 ### 1. Dockerfile 작성하기
 
 프로젝트 루트 디렉토리(`nest-app`)에 `Dockerfile`을 생성하고, Node.js 환경에서 NestJS 앱이 실행될 수 있도록 스크립트를 작성합니다.
+
+이 애플리케이션은 PostgreSQL에 연결해야 하므로 실행 시 `DATABASE_URL` 환경변수가 필요합니다.
 
 ### 2. Docker 이미지 빌드하기
 
